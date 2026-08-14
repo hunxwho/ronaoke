@@ -1,7 +1,7 @@
 -- ================================================
 -- BEST ROANOKE AUTO FARM - THE ULTIMATE EDITION
 -- Features: Zero-Delay Velocity Engine, Mobile Support, Safe Player Mods, HYPER-SPEED TP ROB
--- Updates: Render-Stepped UI Timer Sync, Cyber-Glitch Cinematic Intro, Mobile Pick-up Fix
+-- Updates: Render-Stepped UI Timer Sync, Cyber-Glitch Cinematic Intro, Floor-Clip Pickup Fix
 -- ================================================
 
 local Players = game:GetService("Players")
@@ -300,18 +300,18 @@ local function pickupMoney(radius)
 
     if root.Name == "HumanoidRootPart" then root.Anchored = true end
 
-    while (os.clock() - startTime) < 10 do
+    while (os.clock() - startTime) < 8 do
         local cashBags = {}
         for _, obj in ipairs(workspace:GetDescendants()) do
             if obj:IsA("ProximityPrompt") and obj.Enabled then
                 local parent = obj.Parent
                 if parent and (parent:IsA("BasePart") or parent:IsA("MeshPart")) then
-                    if obj.HoldDuration < 2 then
+                    if obj.HoldDuration <= 1 then
                         local name = parent.Name:lower()
                         local actText = obj.ActionText:lower()
                         local objText = obj.ObjectText:lower()
                         
-                        if name:find("money") or name:find("cash") or name:find("bill") or name:find("bag") or name:find("loot") or actText:find("take") or actText:find("steal") or actText:find("pick") or actText:find("collect") or actText:find("grab") or objText:find("cash") then
+                        if name:find("money") or name:find("cash") or name:find("bill") or name:find("bag") or name:find("loot") or actText:find("take") or actText:find("steal") or actText:find("pick") or actText:find("collect") or actText:find("grab") or actText:find("interact") or actText:find("item") or actText:find("drop") or objText:find("cash") then
                             if (parent.Position - centerPosition).Magnitude <= searchRadius then
                                 table.insert(cashBags, {Prompt = obj, Part = parent})
                             end
@@ -326,17 +326,18 @@ local function pickupMoney(radius)
             emptyTime = 0
             for _, bag in ipairs(cashBags) do
                 if not bag.Prompt.Enabled then continue end 
-                -- Stand exactly on the cash
-                root.CFrame = CFrame.new(bag.Part.Position)
+                -- Teleport flush above the item to guarantee strict server distance checks
+                root.CFrame = CFrame.new(bag.Part.Position + Vector3.new(0, 2.5, 0))
                 stopMovement(root)
-                task.wait(0.1)
+                task.wait(0.15)
                 
                 triggerPrompt(bag.Prompt)
+                task.wait(0.1)
             end
         else
             emptyTime = emptyTime + 0.1
             task.wait(0.1)
-            if emptyTime >= 4.5 then break end
+            if emptyTime >= 3.5 then break end
         end
     end
     
