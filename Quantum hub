@@ -2,7 +2,8 @@
 -- QUANTUM HUB - ROANOKE AUTO FARM (ULTRA REMASTERED)
 -- Compatibility: Mobile (Touch), Tablet, PC & Low-UNC Executors
 -- Features: Multi-Input Velocity Engine, Touch Proximity Bypass,
---           Smart Store Robbery, Dual-Race Auto Farm, Neon-Cyber UI
+--           Smart Store Robbery, Dual-Race Auto Farm, Neon-Cyber UI,
+--           In-Car Radio Audio Hijack
 -- ================================================
 
 local Players = game:GetService("Players")
@@ -49,7 +50,6 @@ local RobLocations = {
 
 local SELL_CFRAME = CFrame.new(-4387, -7, -2324)
 
--- DRAG RACE WAYPOINTS
 local DRAG_PATH = {
     Vector3.new(-380.2, -8.5, -4252.0), Vector3.new(-349.9, -8.6, -4218.7), Vector3.new(-324.9, -8.7, -4185.4),
     Vector3.new(-297.8, -9.0, -4146.6), Vector3.new(-268.4, -9.0, -4104.0), Vector3.new(-244.3, -9.0, -4069.2),
@@ -73,7 +73,6 @@ local DRAG_PATH = {
     Vector3.new(91.7, -9.1, -1035.6), Vector3.new(90.9, -9.1, -985.2), Vector3.new(89.6, -9.1, -904.5)
 }
 
--- ATW RACE WAYPOINTS
 local ATW_PATH = {
     Vector3.new(78.7, -9.0, -3230.3), Vector3.new(72.6, -9.0, -3270.1), Vector3.new(66.7, -9.0, -3309.7),
     Vector3.new(59.7, -9.0, -3356.5), Vector3.new(53.3, -9.0, -3399.2), Vector3.new(46.9, -9.0, -3441.7),
@@ -238,7 +237,6 @@ local function triggerPrompt(prompt)
     local root = getRoot()
     
     if holdTime > 0.5 then
-        -- Multi-second hold robbery prompt
         pcall(function() prompt:InputHoldBegin() end)
         
         local startTime = os.clock()
@@ -256,7 +254,6 @@ local function triggerPrompt(prompt)
             pcall(function() fireproximityprompt(prompt, holdTime, true) end)
         end
     else
-        -- Instant loot bags / cash drops
         if typeof(fireproximityprompt) == "function" then
             pcall(function() fireproximityprompt(prompt, 0, true) end)
             pcall(function() fireproximityprompt(prompt) end)
@@ -367,7 +364,6 @@ task.spawn(function()
         local isCar = (root.Name ~= "HumanoidRootPart")
         local hum = char:FindFirstChild("Humanoid")
 
-        -- 1. AUTO RACING STEERING & VELOCITY
         if isAutoRacing and ActiveRacePath and CurrentRaceNode <= #ActiveRacePath then
             local targetPos = ActiveRacePath[CurrentRaceNode]
             local targetVec = Vector3.new(targetPos.X, root.Position.Y, targetPos.Z)
@@ -392,7 +388,6 @@ task.spawn(function()
             return
         end
         
-        -- 2. UNIVERSAL CAR MODS (MOBILE TOUCH THROTTLE + PC HYBRID)
         if isCar and CarModsEnabled then
             local seat = hum and hum.SeatPart
             local throttle = 0
@@ -405,7 +400,6 @@ task.spawn(function()
                 end
             end
             
-            -- Fallback / Keyboard & Mobile Joystick detection
             if throttle == 0 then
                 if UIS:IsKeyDown(Enum.KeyCode.W) or UIS:IsKeyDown(Enum.KeyCode.Up) then
                     throttle = 1
@@ -433,7 +427,6 @@ task.spawn(function()
             end
         end
         
-        -- 3. CUSTOM WALKSPEED (C-WALK FOR BYPASS)
         if not isCar and hum and CustomWalkSpeed > 16 then
             hum.WalkSpeed = 16
             if hum.MoveDirection.Magnitude > 0 then
@@ -444,7 +437,7 @@ task.spawn(function()
     end)
 end)
 
--- ====================== AUTO RACE LOOP (MOBILE & PC VIEWPORT SYNC) ======================
+-- ====================== AUTO RACE LOOP (16 SECOND LAUNCH) ======================
 task.spawn(function()
     while task.wait(1) do
         if AutoDragRaceEnabled then
@@ -477,49 +470,12 @@ task.spawn(function()
                 end)
             end
             
-            local syncStart = os.clock()
-            local hasSeenTimer = false
-            local lastTxt = ""
-            
-            while (os.clock() - syncStart) < 25 do
+            for i = 16, 1, -1 do
                 if not AutoDragRaceEnabled then break end
-
-                local pGui = LocalPlayer:FindFirstChild("PlayerGui")
-                local timersNode = pGui and pGui:FindFirstChild("RaceGui") and pGui.RaceGui:FindFirstChild("RaceInfoFrame") and pGui.RaceGui.RaceInfoFrame:FindFirstChild("Timers")
-
-                if timersNode then
-                    hasSeenTimer = true
-                    local currentTxt = ""
-                    if timersNode:IsA("TextLabel") then
-                        currentTxt = timersNode.Text
-                    else
-                        for _, v in ipairs(timersNode:GetDescendants()) do
-                            if v:IsA("TextLabel") then currentTxt = currentTxt .. v.Text end
-                        end
-                    end
-                    
-                    if currentTxt == "" then currentTxt = "0" end
-                    CurrentStatus = "Syncing UI: [" .. currentTxt .. "]"
-                    
-                    local cLower = currentTxt:lower()
-                    if cLower:find("go") or cLower:find("start") then break end
-                    
-                    if lastTxt ~= "" and lastTxt ~= currentTxt then
-                        local cNum = tonumber((cLower:gsub("[^%d%.]", "")))
-                        local pNum = tonumber((lastTxt:lower():gsub("[^%d%.]", "")))
-                        
-                        if cNum and pNum then
-                            if (pNum == 0 and cNum > 0) or (pNum > 0 and cNum == 0) then break end
-                        end
-                    end
-                    lastTxt = currentTxt
-                else
-                    if hasSeenTimer then break else CurrentStatus = "Waiting for Race UI..." end
-                end
-
+                CurrentStatus = "Race starting in: " .. i .. "s"
                 local currentRoot = getRoot()
                 if currentRoot then stopMovement(currentRoot) end
-                RunService.RenderStepped:Wait()
+                task.wait(1)
             end
             
             if not AutoDragRaceEnabled then continue end
@@ -577,7 +533,7 @@ task.spawn(function()
             CurrentStatus = "Cooling down..."
             task.wait(2.5)
         else
-            if CurrentStatus:match("Race") or CurrentStatus:match("Queueing") or CurrentStatus:match("Waiting") or CurrentStatus:match("Sync") then
+            if CurrentStatus:match("Race") or CurrentStatus:match("Queueing") or CurrentStatus:match("Waiting") or CurrentStatus:match("Sync") or CurrentStatus:match("starting in:") then
                 CurrentStatus = "Idle"
                 isAutoRacing = false
                 ActiveRacePath = nil
@@ -988,6 +944,18 @@ local function CreateSection(page, title)
     return Label
 end
 
+local function CreateNote(page, text)
+    local Label = Instance.new("TextLabel", page)
+    Label.Size = UDim2.new(1, 0, 0, 20)
+    Label.Text = text
+    Label.Font = Enum.Font.GothamSemibold
+    Label.TextSize = 11
+    Label.TextColor3 = Color3.fromRGB(255, 100, 100)
+    Label.BackgroundTransparency = 1
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+    return Label
+end
+
 local function CreateToggle(page, text, defaultState, callback)
     local Frame = Instance.new("Frame", page)
     Frame.Size = UDim2.new(1, 0, 0, 42)
@@ -1166,11 +1134,47 @@ local function CreateButton(page, text, callback)
     Btn.MouseButton1Click:Connect(callback)
 end
 
+local function CreateTextBox(page, text, placeholder, callback)
+    local Frame = Instance.new("Frame", page)
+    Frame.Size = UDim2.new(1, 0, 0, 48)
+    Frame.BackgroundColor3 = Theme.Card
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+    ApplyStroke(Frame)
+
+    local Label = Instance.new("TextLabel", Frame)
+    Label.Size = UDim2.new(0.5, 0, 1, 0)
+    Label.Position = UDim2.new(0, 12, 0, 0)
+    Label.Text = text
+    Label.Font = Enum.Font.GothamSemibold
+    Label.TextSize = 13
+    Label.TextColor3 = Theme.TextPrimary
+    Label.BackgroundTransparency = 1
+    Label.TextXAlignment = Enum.TextXAlignment.Left
+
+    local Box = Instance.new("TextBox", Frame)
+    Box.Size = UDim2.new(0.4, 0, 0, 28)
+    Box.Position = UDim2.new(0.6, -10, 0, 10)
+    Box.BackgroundColor3 = Theme.Sidebar
+    Box.PlaceholderText = placeholder
+    Box.Text = ""
+    Box.TextColor3 = Theme.TextPrimary
+    Box.Font = Enum.Font.Gotham
+    Box.TextSize = 12
+    Box.ClipsDescendants = true
+    Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 6)
+
+    Box.FocusLost:Connect(function(enterPressed)
+        if Box.Text ~= "" then
+            callback(Box.Text)
+        end
+    end)
+end
+
 -- ====================== BUILD TABS & CONTROLS ======================
 local FarmPage, FarmTab = CreateTab("Farming")
 local CarPage, CarTab = CreateTab("Vehicle")
 local PlayerPage, PlayerTab = CreateTab("Player")
-local SettingsPage, SettingsTab = CreateTab("Settings")
+local SettingsPage, SettingsTab = CreateTab("Misc")
 
 -- FARMING
 CreateSection(FarmPage, "Small Stores Auto Rob")
@@ -1183,7 +1187,7 @@ CreateSection(FarmPage, "Automated Race Farming")
 CreateDropdown(FarmPage, "Race Track", {"Drag", "ATW"}, "Drag", function(val)
     SelectedRaceType = val
 end)
-CreateToggle(FarmPage, "Auto-Race Loop (UI Synced)", false, function(state)
+CreateToggle(FarmPage, "Auto-Race Loop (16s Launch)", false, function(state)
     AutoDragRaceEnabled = state
     if not state and not AutoFarmEnabled then CurrentStatus = "Idle" end
 end)
@@ -1227,7 +1231,60 @@ CreateToggle(PlayerPage, "Anti-Arrest Prompt Destroyer", false, function(state)
     AntiArrestEnabled = state
 end)
 
--- SETTINGS
+-- SETTINGS / MISC
+CreateSection(SettingsPage, "In-Car Radio Audio Hijack")
+CreateNote(SettingsPage, "⚠️ U NEED THE MUSIC GAMEPASS TO USE THE BYPASS AUDIO")
+CreateTextBox(SettingsPage, "Play Custom Audio ID", "Enter ID...", function(txt)
+    local id = tonumber(txt:match("%d+"))
+    if not id then 
+        CurrentStatus = "Invalid Audio ID!"
+        return 
+    end
+
+    local char = LocalPlayer.Character
+    local hum = char and char:FindFirstChild("Humanoid")
+    
+    if hum and hum.SeatPart then
+        local vehicle = hum.SeatPart:FindFirstAncestorOfClass("Model")
+        if vehicle then
+            local foundRadio = false
+            
+            -- 1. Direct Sound Object Hijack
+            for _, obj in ipairs(vehicle:GetDescendants()) do
+                if obj:IsA("Sound") then
+                    local name = obj.Name:lower()
+                    -- Target potential radio objects, avoid engines/idles
+                    if name:find("radio") or name:find("music") or name:find("song") or name:find("audio") then
+                        obj.SoundId = "rbxassetid://" .. id
+                        obj.TimePosition = 0
+                        obj.Playing = true
+                        obj.Volume = 1
+                        foundRadio = true
+                    end
+                end
+            end
+            
+            -- 2. Backup RemoteEvent trigger
+            for _, obj in ipairs(vehicle:GetDescendants()) do
+                if obj:IsA("RemoteEvent") and (obj.Name:lower():find("radio") or obj.Name:lower():find("music")) then
+                    pcall(function() obj:FireServer("Play", id) end)
+                    pcall(function() obj:FireServer(id) end)
+                end
+            end
+
+            if foundRadio then
+                CurrentStatus = "Playing ID: " .. id .. " in Car!"
+            else
+                CurrentStatus = "No Radio Sound found in this car."
+            end
+        else
+            CurrentStatus = "You must be in a car!"
+        end
+    else
+        CurrentStatus = "You must be in a car!"
+    end
+end)
+
 CreateSection(SettingsPage, "Utilities & Performance")
 CreateToggle(SettingsPage, "Low Quality Saver (Boost FPS)", false, function(state)
     if state then
