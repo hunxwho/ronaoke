@@ -1,7 +1,7 @@
 -- ================================================
 -- QUANTUM HUB - ROANOKE AUTO FARM (ULTRA REMASTERED)
 -- Compatibility: Mobile (Touch), Tablet, PC & Low-UNC Executors
--- Features: Multi-Input Velocity Engine, Touch Proximity Bypass,
+-- Features: Native Engine Auto-Drive, Multi-Input Velocity Engine, 
 --           Smart Store Robbery, Dual-Race Auto Farm, Neon-Cyber UI,
 --           In-Car Radio Audio Hijack
 -- ================================================
@@ -379,15 +379,26 @@ task.spawn(function()
                 local flatTarget = Vector3.new(lookDir.X, 0, lookDir.Z).Unit
                 local turnSpeed = flatLook:Cross(flatTarget).Y
                 
+                -- Always steer towards the waypoint to keep car accurately on track
                 root.AssemblyAngularVelocity = Vector3.new(root.AssemblyAngularVelocity.X, turnSpeed * 16, root.AssemblyAngularVelocity.Z)
-                root.AssemblyLinearVelocity = Vector3.new(lookDir.X * ModMaxSpeed, root.AssemblyLinearVelocity.Y, lookDir.Z * ModMaxSpeed)
+                
+                -- IF MODS ARE ON: Force velocity (Speed Changer)
+                if CarModsEnabled then
+                    root.AssemblyLinearVelocity = Vector3.new(lookDir.X * ModMaxSpeed, root.AssemblyLinearVelocity.Y, lookDir.Z * ModMaxSpeed)
+                end
+                -- IF MODS ARE OFF: The script ignores AssemblyLinearVelocity and relies on the W-hold in the race loop.
             else
                 root.CFrame = CFrame.lookAt(root.Position, targetVec)
-                root.AssemblyLinearVelocity = Vector3.new(lookDir.X * ModMaxSpeed, root.AssemblyLinearVelocity.Y, lookDir.Z * ModMaxSpeed)
+                if CarModsEnabled then
+                    root.AssemblyLinearVelocity = Vector3.new(lookDir.X * ModMaxSpeed, root.AssemblyLinearVelocity.Y, lookDir.Z * ModMaxSpeed)
+                else
+                    if hum then hum:MoveTo(targetPos) end
+                end
             end
             return
         end
         
+        -- NORMAL DRIVING MODS (Outside of Racing)
         if isCar and CarModsEnabled then
             local seat = hum and hum.SeatPart
             local throttle = 0
@@ -437,7 +448,7 @@ task.spawn(function()
     end)
 end)
 
--- ====================== AUTO RACE LOOP (16 SECOND LAUNCH) ======================
+-- ====================== AUTO RACE LOOP (16 SECOND LAUNCH & ENGINE W-HOLD) ======================
 task.spawn(function()
     while task.wait(1) do
         if AutoDragRaceEnabled then
@@ -490,6 +501,8 @@ task.spawn(function()
                 if seat and seat:IsA("VehicleSeat") then
                     seat.ThrottleFloat = 1
                 end
+                -- Send physical 'W' hold down event to game engine
+                pcall(function() VIM:SendKeyEvent(true, Enum.KeyCode.W, false, game) end)
             end)
             
             local timeout = 0
@@ -501,6 +514,9 @@ task.spawn(function()
                     if seat and seat:IsA("VehicleSeat") then
                         seat.ThrottleFloat = 1
                     end
+                    
+                    -- Continuously ensure W is registered as held down
+                    pcall(function() VIM:SendKeyEvent(true, Enum.KeyCode.W, false, game) end)
 
                     local targetPos = ActiveRacePath[CurrentRaceNode]
                     local flatRoot = Vector3.new(raceRoot.Position.X, 0, raceRoot.Position.Z)
@@ -516,6 +532,9 @@ task.spawn(function()
             
             isAutoRacing = false
             ActiveRacePath = nil
+            
+            -- Release 'W' key
+            pcall(function() VIM:SendKeyEvent(false, Enum.KeyCode.W, false, game) end)
             
             local fChar = LocalPlayer.Character
             local fSeat = fChar and fChar:FindFirstChild("Humanoid") and fChar.Humanoid.SeatPart
@@ -537,6 +556,8 @@ task.spawn(function()
                 CurrentStatus = "Idle"
                 isAutoRacing = false
                 ActiveRacePath = nil
+                -- Ensure W is unheld if player forces toggle off mid-race
+                pcall(function() VIM:SendKeyEvent(false, Enum.KeyCode.W, false, game) end)
             end
         end
     end
