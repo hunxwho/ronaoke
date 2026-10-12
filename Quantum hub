@@ -1,9 +1,8 @@
 -- ================================================
--- QUANTUM HUB - ROANOKE AUTO FARM (ULTRA REMASTERED)
--- Compatibility: Mobile (Touch), Tablet, PC & Low-UNC Executors
--- Features: Native Engine Auto-Drive, Multi-Input Velocity Engine, 
---           Smart Store Robbery, Dual-Race Auto Farm, Neon-Cyber UI,
---           In-Car Radio Audio Hijack
+-- ROANOKE HUB - MOBILE & PC EDITION
+-- Features: Native Engine Auto-Drive, Touch Support, 
+--           Store Robbery, Race Farm, Traffic Noclip,
+--           Modern Minimalist UI
 -- ================================================
 
 local Players = game:GetService("Players")
@@ -153,6 +152,7 @@ local AutoFarmEnabled = false
 local AntiArrestEnabled = false
 local AutoDragRaceEnabled = false
 local GhostModeEnabled = false
+local HighwayNoclipEnabled = false
 
 -- Vehicle State
 local CarModsEnabled = false
@@ -339,6 +339,55 @@ local function pickupMoney(radius)
     return foundAnyCash
 end
 
+-- ====================== TRAFFIC NOCLIP ENGINE ======================
+task.spawn(function()
+    local trafficRender = workspace:WaitForChild("TrafficRender", 10)
+    
+    local currentHitbox = nil
+    local hitboxParts = {}
+
+    local function updatePartsCache(newHitbox)
+        currentHitbox = newHitbox
+        hitboxParts = {}
+        
+        if currentHitbox:IsA("BasePart") then
+            table.insert(hitboxParts, currentHitbox)
+        end
+        
+        for _, part in ipairs(currentHitbox:GetDescendants()) do
+            if part:IsA("BasePart") then
+                table.insert(hitboxParts, part)
+            end
+        end
+    end
+
+    RunService.Stepped:Connect(function()
+        if not HighwayNoclipEnabled then return end
+        
+        if not trafficRender then
+            trafficRender = workspace:FindFirstChild("TrafficRender")
+            return
+        end
+
+        local foundHitbox = trafficRender:FindFirstChild("TrafficHitbox")
+        
+        if foundHitbox and foundHitbox ~= currentHitbox then
+            updatePartsCache(foundHitbox)
+        end
+
+        if currentHitbox and currentHitbox.Parent then
+            for _, part in ipairs(hitboxParts) do
+                if part.CanCollide then
+                    part.CanCollide = false
+                end
+            end
+        else
+            currentHitbox = nil
+            hitboxParts = {}
+        end
+    end)
+end)
+
 -- ====================== INFINITE JUMP ======================
 UIS.JumpRequest:Connect(function()
     local char = LocalPlayer.Character
@@ -379,14 +428,13 @@ task.spawn(function()
                 local flatTarget = Vector3.new(lookDir.X, 0, lookDir.Z).Unit
                 local turnSpeed = flatLook:Cross(flatTarget).Y
                 
-                -- Always steer towards the waypoint to keep car accurately on track
+                -- Always steer towards the waypoint
                 root.AssemblyAngularVelocity = Vector3.new(root.AssemblyAngularVelocity.X, turnSpeed * 16, root.AssemblyAngularVelocity.Z)
                 
                 -- IF MODS ARE ON: Force velocity (Speed Changer)
                 if CarModsEnabled then
                     root.AssemblyLinearVelocity = Vector3.new(lookDir.X * ModMaxSpeed, root.AssemblyLinearVelocity.Y, lookDir.Z * ModMaxSpeed)
                 end
-                -- IF MODS ARE OFF: The script ignores AssemblyLinearVelocity and relies on the W-hold in the race loop.
             else
                 root.CFrame = CFrame.lookAt(root.Position, targetVec)
                 if CarModsEnabled then
@@ -599,7 +647,7 @@ task.spawn(function()
                     end
 
                     if not targetPrompt then
-                        CurrentStatus = "Prompt loading..."
+                        CurrentStatus = "Waiting for prompt..."
                         task.wait(1.5)
                         retryAttempts = retryAttempts + 1
                         continue
@@ -620,7 +668,7 @@ task.spawn(function()
                         LocationCooldowns[loc.Name] = os.time() + 300
 
                         if AutoFarmEnabled and not AutoDragRaceEnabled then
-                            CurrentStatus = "Selling loot..."
+                            CurrentStatus = "Selling items..."
                             stopMovement(root)
                             root.CFrame = SELL_CFRAME * CFrame.new(0, 25, 0)
                             task.wait(1.2)
@@ -635,7 +683,7 @@ task.spawn(function()
                                 if root.Name == "HumanoidRootPart" then root.Anchored = true end
                                 for cd = 80, 1, -1 do
                                     if not AutoFarmEnabled or AutoDragRaceEnabled then break end
-                                    CurrentStatus = "Sky Cooldown: " .. cd .. "s"
+                                    CurrentStatus = "Hiding: " .. cd .. "s"
                                     task.wait(1)
                                 end
                                 if root.Name == "HumanoidRootPart" then root.Anchored = false end
@@ -643,7 +691,6 @@ task.spawn(function()
                             successfulRobs = 0
                         end
                     else
-                        CurrentStatus = "Retrying robbery..."
                         task.wait(2)
                         retryAttempts = retryAttempts + 1
                     end
@@ -686,34 +733,32 @@ task.spawn(function()
     end
 end)
 
--- ====================== REMASTERED MODERN CYBER UI ======================
-if parentGui:FindFirstChild("QuantumCyberUI") then parentGui.QuantumCyberUI:Destroy() end
+-- ====================== MODERN MINIMALIST UI ======================
+if parentGui:FindFirstChild("RoanokeUI") then parentGui.RoanokeUI:Destroy() end
 local ScreenGui = Instance.new("ScreenGui")
-ScreenGui.Name = "QuantumCyberUI"
+ScreenGui.Name = "RoanokeUI"
 ScreenGui.ResetOnSpawn = false
 ScreenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
 ScreenGui.Parent = parentGui
 
 local Theme = {
-    Background = Color3.fromRGB(11, 12, 18),
-    Sidebar = Color3.fromRGB(16, 17, 26),
-    Card = Color3.fromRGB(22, 24, 36),
-    Accent = Color3.fromRGB(124, 77, 255),
-    AccentSecondary = Color3.fromRGB(0, 230, 255),
-    TextPrimary = Color3.fromRGB(255, 255, 255),
-    TextSecondary = Color3.fromRGB(145, 150, 175),
-    Border = Color3.fromRGB(38, 42, 60),
-    Success = Color3.fromRGB(46, 204, 113),
-    Warning = Color3.fromRGB(255, 170, 0)
+    Background = Color3.fromRGB(24, 24, 24),
+    Sidebar = Color3.fromRGB(20, 20, 20),
+    Card = Color3.fromRGB(32, 32, 32),
+    Accent = Color3.fromRGB(85, 115, 255),
+    TextPrimary = Color3.fromRGB(240, 240, 240),
+    TextSecondary = Color3.fromRGB(150, 150, 150),
+    Border = Color3.fromRGB(45, 45, 45),
+    ToggleOff = Color3.fromRGB(50, 50, 50),
+    WarningText = Color3.fromRGB(255, 100, 100)
 }
 
-local function ApplyStroke(guiItem, color, thickness)
+local function ApplyStroke(guiItem)
     local stroke = Instance.new("UIStroke")
-    stroke.Color = color or Theme.Border
-    stroke.Thickness = thickness or 1
+    stroke.Color = Theme.Border
+    stroke.Thickness = 1
     stroke.ApplyStrokeMode = Enum.ApplyStrokeMode.Border
     stroke.Parent = guiItem
-    return stroke
 end
 
 local function MakeDraggable(guiItem, dragHandle)
@@ -752,18 +797,18 @@ end
 local MainFrame = Instance.new("Frame")
 MainFrame.Name = "MainFrame"
 MainFrame.AnchorPoint = Vector2.new(0.5, 0.5)
-MainFrame.Size = UDim2.new(0, 580, 0, 390)
+MainFrame.Size = UDim2.new(0, 560, 0, 380)
 MainFrame.Position = UDim2.new(0.5, 0, 0.5, 0)
 MainFrame.BackgroundColor3 = Theme.Background
 MainFrame.BorderSizePixel = 0
 MainFrame.Parent = ScreenGui
-Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 14)
-ApplyStroke(MainFrame, Theme.Border, 1.2)
+Instance.new("UICorner", MainFrame).CornerRadius = UDim.new(0, 8)
+ApplyStroke(MainFrame)
 MakeDraggable(MainFrame)
 
 local MainScale = Instance.new("UIScale", MainFrame)
 if IsMobile then
-    MainScale.Scale = math.clamp(Camera.ViewportSize.X / 800, 0.62, 0.85)
+    MainScale.Scale = math.clamp(Camera.ViewportSize.X / 800, 0.65, 0.9)
 else
     MainScale.Scale = 1
 end
@@ -771,16 +816,16 @@ end
 -- Mobile Toggle Button
 local MobileToggle = Instance.new("TextButton")
 MobileToggle.Name = "MobileToggle"
-MobileToggle.Size = UDim2.new(0, 48, 0, 48)
+MobileToggle.Size = UDim2.new(0, 44, 0, 44)
 MobileToggle.Position = UDim2.new(0, 20, 0, 20)
-MobileToggle.BackgroundColor3 = Theme.Sidebar
-MobileToggle.Text = "⚡"
-MobileToggle.TextColor3 = Theme.AccentSecondary
-MobileToggle.Font = Enum.Font.GothamBold
-MobileToggle.TextSize = 20
+MobileToggle.BackgroundColor3 = Theme.Card
+MobileToggle.Text = "≡"
+MobileToggle.TextColor3 = Theme.TextPrimary
+MobileToggle.Font = Enum.Font.GothamMedium
+MobileToggle.TextSize = 24
 MobileToggle.Parent = ScreenGui
-Instance.new("UICorner", MobileToggle).CornerRadius = UDim.new(0, 12)
-ApplyStroke(MobileToggle, Theme.Accent, 1.5)
+Instance.new("UICorner", MobileToggle).CornerRadius = UDim.new(0, 8)
+ApplyStroke(MobileToggle)
 MakeDraggable(MobileToggle)
 
 local isMenuOpen = true
@@ -788,11 +833,11 @@ MobileToggle.MouseButton1Click:Connect(function()
     isMenuOpen = not isMenuOpen
     if isMenuOpen then
         MainFrame.Visible = true
-        TweenService:Create(MainScale, TweenInfo.new(0.4, Enum.EasingStyle.Back, Enum.EasingDirection.Out), {
-            Scale = IsMobile and math.clamp(Camera.ViewportSize.X / 800, 0.62, 0.85) or 1
+        TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Quart, Enum.EasingDirection.Out), {
+            Scale = IsMobile and math.clamp(Camera.ViewportSize.X / 800, 0.65, 0.9) or 1
         }):Play()
     else
-        local tween = TweenService:Create(MainScale, TweenInfo.new(0.3, Enum.EasingStyle.Back, Enum.EasingDirection.In), {Scale = 0})
+        local tween = TweenService:Create(MainScale, TweenInfo.new(0.25, Enum.EasingStyle.Quart, Enum.EasingDirection.In), {Scale = 0})
         tween:Play()
         tween.Completed:Connect(function()
             if not isMenuOpen then MainFrame.Visible = false end
@@ -802,10 +847,10 @@ end)
 
 -- Sidebar
 local Sidebar = Instance.new("Frame", MainFrame)
-Sidebar.Size = UDim2.new(0, 165, 1, 0)
+Sidebar.Size = UDim2.new(0, 160, 1, 0)
 Sidebar.BackgroundColor3 = Theme.Sidebar
 Sidebar.BorderSizePixel = 0
-Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 14)
+Instance.new("UICorner", Sidebar).CornerRadius = UDim.new(0, 8)
 
 local SidebarDivider = Instance.new("Frame", Sidebar)
 SidebarDivider.Size = UDim2.new(0, 1, 1, 0)
@@ -815,49 +860,28 @@ SidebarDivider.BorderSizePixel = 0
 
 local Title = Instance.new("TextLabel", Sidebar)
 Title.Size = UDim2.new(1, -20, 0, 50)
-Title.Position = UDim2.new(0, 15, 0, 10)
-Title.Text = "QUANTUM <font color=\"rgb(0,230,255)\">HUB</font>"
-Title.RichText = true
-Title.Font = Enum.Font.GothamBlack
-Title.TextSize = 16
+Title.Position = UDim2.new(0, 15, 0, 5)
+Title.Text = "Roanoke Hub"
+Title.Font = Enum.Font.GothamBold
+Title.TextSize = 14
 Title.TextColor3 = Theme.TextPrimary
 Title.BackgroundTransparency = 1
 Title.TextXAlignment = Enum.TextXAlignment.Left
 
 local TabList = Instance.new("ScrollingFrame", Sidebar)
-TabList.Size = UDim2.new(1, -20, 1, -125)
-TabList.Position = UDim2.new(0, 10, 0, 60)
+TabList.Size = UDim2.new(1, -16, 1, -70)
+TabList.Position = UDim2.new(0, 8, 0, 55)
 TabList.BackgroundTransparency = 1
 TabList.ScrollBarThickness = 0
 
 local TabLayout = Instance.new("UIListLayout", TabList)
-TabLayout.Padding = UDim.new(0, 6)
+TabLayout.Padding = UDim.new(0, 4)
 TabLayout.HorizontalAlignment = Enum.HorizontalAlignment.Center
-
--- Discord Copy Button
-local DiscordBtn = Instance.new("TextButton", Sidebar)
-DiscordBtn.Size = UDim2.new(1, -20, 0, 36)
-DiscordBtn.Position = UDim2.new(0, 10, 1, -48)
-DiscordBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-DiscordBtn.Text = "Copy Discord"
-DiscordBtn.TextColor3 = Color3.new(1, 1, 1)
-DiscordBtn.Font = Enum.Font.GothamBold
-DiscordBtn.TextSize = 12
-Instance.new("UICorner", DiscordBtn).CornerRadius = UDim.new(0, 8)
-
-DiscordBtn.MouseButton1Click:Connect(function()
-    pcall(function() setclipboard("https://discord.gg/2uShkJWnUA") end)
-    DiscordBtn.Text = "Copied!"
-    DiscordBtn.BackgroundColor3 = Theme.Success
-    task.wait(1.5)
-    DiscordBtn.Text = "Copy Discord"
-    DiscordBtn.BackgroundColor3 = Color3.fromRGB(88, 101, 242)
-end)
 
 -- Content Area
 local ContentArea = Instance.new("Frame", MainFrame)
-ContentArea.Size = UDim2.new(1, -165, 1, 0)
-ContentArea.Position = UDim2.new(0, 165, 0, 0)
+ContentArea.Size = UDim2.new(1, -160, 1, 0)
+ContentArea.Position = UDim2.new(0, 160, 0, 0)
 ContentArea.BackgroundTransparency = 1
 
 local Header = Instance.new("Frame", ContentArea)
@@ -867,9 +891,9 @@ Header.BackgroundTransparency = 1
 local ActiveTitle = Instance.new("TextLabel", Header)
 ActiveTitle.Size = UDim2.new(0.45, 0, 1, 0)
 ActiveTitle.Position = UDim2.new(0, 20, 0, 0)
-ActiveTitle.Text = "Farming"
-ActiveTitle.Font = Enum.Font.GothamBold
-ActiveTitle.TextSize = 17
+ActiveTitle.Text = "Farm"
+ActiveTitle.Font = Enum.Font.GothamMedium
+ActiveTitle.TextSize = 16
 ActiveTitle.TextColor3 = Theme.TextPrimary
 ActiveTitle.BackgroundTransparency = 1
 ActiveTitle.TextXAlignment = Enum.TextXAlignment.Left
@@ -877,24 +901,24 @@ ActiveTitle.TextXAlignment = Enum.TextXAlignment.Left
 local StatusLabel = Instance.new("TextLabel", Header)
 StatusLabel.Size = UDim2.new(0.55, -20, 1, 0)
 StatusLabel.Position = UDim2.new(0.45, 0, 0, 0)
-StatusLabel.Text = "Status: Idle"
-StatusLabel.Font = Enum.Font.GothamSemibold
+StatusLabel.Text = "Idle"
+StatusLabel.Font = Enum.Font.Gotham
 StatusLabel.TextSize = 12
-StatusLabel.TextColor3 = Theme.AccentSecondary
+StatusLabel.TextColor3 = Theme.TextSecondary
 StatusLabel.BackgroundTransparency = 1
 StatusLabel.TextXAlignment = Enum.TextXAlignment.Right
 
 task.spawn(function()
     while task.wait(0.25) do
         if StatusLabel then
-            StatusLabel.Text = "Status: " .. tostring(CurrentStatus)
+            StatusLabel.Text = tostring(CurrentStatus)
         end
     end
 end)
 
 local PagesContainer = Instance.new("Frame", ContentArea)
 PagesContainer.Size = UDim2.new(1, -30, 1, -65)
-PagesContainer.Position = UDim2.new(0, 15, 0, 52)
+PagesContainer.Position = UDim2.new(0, 15, 0, 50)
 PagesContainer.BackgroundTransparency = 1
 
 local Pages = {}
@@ -911,7 +935,7 @@ local function SelectTab(tabBtn, pageFrame, name)
         page.Visible = false
     end
     TweenService:Create(tabBtn, TweenInfo.new(0.2), {
-        BackgroundColor3 = Theme.Accent,
+        BackgroundColor3 = Theme.Card,
         TextColor3 = Theme.TextPrimary
     }):Play()
     pageFrame.Visible = true
@@ -920,13 +944,13 @@ end
 
 local function CreateTab(name)
     local TabBtn = Instance.new("TextButton", TabList)
-    TabBtn.Size = UDim2.new(1, 0, 0, 36)
+    TabBtn.Size = UDim2.new(1, 0, 0, 32)
     TabBtn.BackgroundColor3 = Theme.Sidebar
     TabBtn.Text = name
     TabBtn.TextColor3 = Theme.TextSecondary
-    TabBtn.Font = Enum.Font.GothamSemibold
-    TabBtn.TextSize = 13
-    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 8)
+    TabBtn.Font = Enum.Font.GothamMedium
+    TabBtn.TextSize = 12
+    Instance.new("UICorner", TabBtn).CornerRadius = UDim.new(0, 6)
     
     local PageFrame = Instance.new("ScrollingFrame", PagesContainer)
     PageFrame.Size = UDim2.new(1, 0, 1, 0)
@@ -955,23 +979,11 @@ end
 
 local function CreateSection(page, title)
     local Label = Instance.new("TextLabel", page)
-    Label.Size = UDim2.new(1, 0, 0, 22)
-    Label.Text = string.upper(title)
-    Label.Font = Enum.Font.GothamBold
-    Label.TextSize = 11
-    Label.TextColor3 = Theme.AccentSecondary
-    Label.BackgroundTransparency = 1
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-    return Label
-end
-
-local function CreateNote(page, text)
-    local Label = Instance.new("TextLabel", page)
     Label.Size = UDim2.new(1, 0, 0, 20)
-    Label.Text = text
-    Label.Font = Enum.Font.GothamSemibold
-    Label.TextSize = 11
-    Label.TextColor3 = Color3.fromRGB(255, 100, 100)
+    Label.Text = title
+    Label.Font = Enum.Font.GothamMedium
+    Label.TextSize = 12
+    Label.TextColor3 = Theme.TextPrimary
     Label.BackgroundTransparency = 1
     Label.TextXAlignment = Enum.TextXAlignment.Left
     return Label
@@ -979,80 +991,91 @@ end
 
 local function CreateToggle(page, text, defaultState, callback)
     local Frame = Instance.new("Frame", page)
-    Frame.Size = UDim2.new(1, 0, 0, 42)
+    Frame.Size = UDim2.new(1, 0, 0, 40)
     Frame.BackgroundColor3 = Theme.Card
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
     ApplyStroke(Frame)
     
     local Label = Instance.new("TextLabel", Frame)
     Label.Size = UDim2.new(0.7, 0, 1, 0)
     Label.Position = UDim2.new(0, 12, 0, 0)
     Label.Text = text
-    Label.Font = Enum.Font.GothamSemibold
-    Label.TextSize = 13
-    Label.TextColor3 = Theme.TextPrimary
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 12
+    Label.TextColor3 = Theme.TextSecondary
     Label.BackgroundTransparency = 1
     Label.TextXAlignment = Enum.TextXAlignment.Left
     
     local Btn = Instance.new("TextButton", Frame)
-    Btn.Size = UDim2.new(0, 44, 0, 22)
-    Btn.Position = UDim2.new(1, -54, 0.5, -11)
-    Btn.BackgroundColor3 = defaultState and Theme.Accent or Theme.Sidebar
+    Btn.Size = UDim2.new(0, 40, 0, 20)
+    Btn.Position = UDim2.new(1, -52, 0.5, -10)
+    Btn.BackgroundColor3 = defaultState and Theme.Accent or Theme.ToggleOff
     Btn.Text = ""
     Instance.new("UICorner", Btn).CornerRadius = UDim.new(1, 0)
     
     local Dot = Instance.new("Frame", Btn)
     Dot.Size = UDim2.new(0, 16, 0, 16)
-    Dot.Position = defaultState and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)
+    Dot.Position = defaultState and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)
     Dot.BackgroundColor3 = Color3.new(1, 1, 1)
     Instance.new("UICorner", Dot).CornerRadius = UDim.new(1, 0)
     
     local state = defaultState
     Btn.MouseButton1Click:Connect(function()
         state = not state
-        TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = state and Theme.Accent or Theme.Sidebar}):Play()
-        TweenService:Create(Dot, TweenInfo.new(0.2), {Position = state and UDim2.new(1, -19, 0.5, -8) or UDim2.new(0, 3, 0.5, -8)}):Play()
+        TweenService:Create(Btn, TweenInfo.new(0.2), {BackgroundColor3 = state and Theme.Accent or Theme.ToggleOff}):Play()
+        TweenService:Create(Dot, TweenInfo.new(0.2), {Position = state and UDim2.new(1, -18, 0.5, -8) or UDim2.new(0, 2, 0.5, -8)}):Play()
+        if state then
+            TweenService:Create(Label, TweenInfo.new(0.2), {TextColor3 = Theme.TextPrimary}):Play()
+        else
+            TweenService:Create(Label, TweenInfo.new(0.2), {TextColor3 = Theme.TextSecondary}):Play()
+        end
         callback(state)
     end)
 end
 
 local function CreateSlider(page, text, min, max, default, callback)
     local Frame = Instance.new("Frame", page)
-    Frame.Size = UDim2.new(1, 0, 0, 54)
+    Frame.Size = UDim2.new(1, 0, 0, 50)
     Frame.BackgroundColor3 = Theme.Card
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
     ApplyStroke(Frame)
     
     local Label = Instance.new("TextLabel", Frame)
     Label.Size = UDim2.new(0.65, 0, 0, 24)
-    Label.Position = UDim2.new(0, 12, 0, 4)
+    Label.Position = UDim2.new(0, 12, 0, 2)
     Label.Text = text
-    Label.Font = Enum.Font.GothamSemibold
-    Label.TextSize = 13
-    Label.TextColor3 = Theme.TextPrimary
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 12
+    Label.TextColor3 = Theme.TextSecondary
     Label.BackgroundTransparency = 1
     Label.TextXAlignment = Enum.TextXAlignment.Left
     
     local ValLabel = Instance.new("TextLabel", Frame)
     ValLabel.Size = UDim2.new(0.35, -12, 0, 24)
-    ValLabel.Position = UDim2.new(0.65, 0, 0, 4)
+    ValLabel.Position = UDim2.new(0.65, 0, 0, 2)
     ValLabel.Text = tostring(default)
-    ValLabel.Font = Enum.Font.GothamBold
-    ValLabel.TextSize = 13
-    ValLabel.TextColor3 = Theme.AccentSecondary
+    ValLabel.Font = Enum.Font.GothamMedium
+    ValLabel.TextSize = 12
+    ValLabel.TextColor3 = Theme.TextPrimary
     ValLabel.BackgroundTransparency = 1
     ValLabel.TextXAlignment = Enum.TextXAlignment.Right
     
     local Track = Instance.new("Frame", Frame)
-    Track.Size = UDim2.new(1, -24, 0, 6)
-    Track.Position = UDim2.new(0, 12, 0, 36)
-    Track.BackgroundColor3 = Theme.Sidebar
+    Track.Size = UDim2.new(1, -24, 0, 4)
+    Track.Position = UDim2.new(0, 12, 0, 34)
+    Track.BackgroundColor3 = Theme.ToggleOff
     Instance.new("UICorner", Track).CornerRadius = UDim.new(1, 0)
     
     local Fill = Instance.new("Frame", Track)
     Fill.Size = UDim2.new(math.clamp((default - min) / (max - min), 0, 1), 0, 1, 0)
     Fill.BackgroundColor3 = Theme.Accent
     Instance.new("UICorner", Fill).CornerRadius = UDim.new(1, 0)
+    
+    local Handle = Instance.new("Frame", Fill)
+    Handle.Size = UDim2.new(0, 12, 0, 12)
+    Handle.Position = UDim2.new(1, -6, 0.5, -6)
+    Handle.BackgroundColor3 = Color3.new(1, 1, 1)
+    Instance.new("UICorner", Handle).CornerRadius = UDim.new(1, 0)
     
     local dragging = false
     local function update(input)
@@ -1085,57 +1108,58 @@ end
 
 local function CreateDropdown(page, text, options, default, callback)
     local Frame = Instance.new("Frame", page)
-    Frame.Size = UDim2.new(1, 0, 0, 42)
+    Frame.Size = UDim2.new(1, 0, 0, 40)
     Frame.BackgroundColor3 = Theme.Card
     Frame.ClipsDescendants = true
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
+    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 6)
     ApplyStroke(Frame)
     
     local Label = Instance.new("TextLabel", Frame)
-    Label.Size = UDim2.new(0.5, 0, 0, 42)
+    Label.Size = UDim2.new(0.5, 0, 0, 40)
     Label.Position = UDim2.new(0, 12, 0, 0)
     Label.Text = text
-    Label.Font = Enum.Font.GothamSemibold
-    Label.TextSize = 13
-    Label.TextColor3 = Theme.TextPrimary
+    Label.Font = Enum.Font.Gotham
+    Label.TextSize = 12
+    Label.TextColor3 = Theme.TextSecondary
     Label.BackgroundTransparency = 1
     Label.TextXAlignment = Enum.TextXAlignment.Left
     
     local DropBtn = Instance.new("TextButton", Frame)
-    DropBtn.Size = UDim2.new(0.4, 0, 0, 26)
+    DropBtn.Size = UDim2.new(0.4, 0, 0, 24)
     DropBtn.Position = UDim2.new(0.6, -10, 0, 8)
-    DropBtn.BackgroundColor3 = Theme.Sidebar
+    DropBtn.BackgroundColor3 = Theme.Background
     DropBtn.Text = default .. "  ▼"
-    DropBtn.TextColor3 = Theme.AccentSecondary
-    DropBtn.Font = Enum.Font.GothamBold
-    DropBtn.TextSize = 12
-    Instance.new("UICorner", DropBtn).CornerRadius = UDim.new(0, 6)
+    DropBtn.TextColor3 = Theme.TextPrimary
+    DropBtn.Font = Enum.Font.GothamMedium
+    DropBtn.TextSize = 11
+    Instance.new("UICorner", DropBtn).CornerRadius = UDim.new(0, 4)
+    ApplyStroke(DropBtn)
     
     local isOpen = false
     DropBtn.MouseButton1Click:Connect(function()
         isOpen = not isOpen
-        TweenService:Create(Frame, TweenInfo.new(0.25, Enum.EasingStyle.Sine), {
-            Size = isOpen and UDim2.new(1, 0, 0, 42 + (#options * 32)) or UDim2.new(1, 0, 0, 42)
+        TweenService:Create(Frame, TweenInfo.new(0.2, Enum.EasingStyle.Sine), {
+            Size = isOpen and UDim2.new(1, 0, 0, 40 + (#options * 30)) or UDim2.new(1, 0, 0, 40)
         }):Play()
         DropBtn.Text = default .. (isOpen and "  ▲" or "  ▼")
     end)
     
     for i, opt in ipairs(options) do
         local OptBtn = Instance.new("TextButton", Frame)
-        OptBtn.Size = UDim2.new(1, -24, 0, 26)
-        OptBtn.Position = UDim2.new(0, 12, 0, 42 + ((i - 1) * 30))
+        OptBtn.Size = UDim2.new(1, -20, 0, 24)
+        OptBtn.Position = UDim2.new(0, 10, 0, 42 + ((i - 1) * 28))
         OptBtn.BackgroundColor3 = Theme.Background
         OptBtn.Text = opt
         OptBtn.TextColor3 = Theme.TextSecondary
         OptBtn.Font = Enum.Font.Gotham
-        OptBtn.TextSize = 12
-        Instance.new("UICorner", OptBtn).CornerRadius = UDim.new(0, 6)
+        OptBtn.TextSize = 11
+        Instance.new("UICorner", OptBtn).CornerRadius = UDim.new(0, 4)
         
         OptBtn.MouseButton1Click:Connect(function()
             default = opt
             isOpen = false
             DropBtn.Text = opt .. "  ▼"
-            TweenService:Create(Frame, TweenInfo.new(0.25), {Size = UDim2.new(1, 0, 0, 42)}):Play()
+            TweenService:Create(Frame, TweenInfo.new(0.2), {Size = UDim2.new(1, 0, 0, 40)}):Play()
             callback(opt)
         end)
     end
@@ -1143,102 +1167,73 @@ end
 
 local function CreateButton(page, text, callback)
     local Btn = Instance.new("TextButton", page)
-    Btn.Size = UDim2.new(1, 0, 0, 40)
+    Btn.Size = UDim2.new(1, 0, 0, 36)
     Btn.BackgroundColor3 = Theme.Card
     Btn.Text = text
-    Btn.Font = Enum.Font.GothamBold
-    Btn.TextSize = 13
-    Btn.TextColor3 = Theme.Accent
-    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 8)
+    Btn.Font = Enum.Font.GothamMedium
+    Btn.TextSize = 12
+    Btn.TextColor3 = Theme.TextPrimary
+    Instance.new("UICorner", Btn).CornerRadius = UDim.new(0, 6)
     ApplyStroke(Btn)
     
     Btn.MouseButton1Click:Connect(callback)
 end
 
-local function CreateTextBox(page, text, placeholder, callback)
-    local Frame = Instance.new("Frame", page)
-    Frame.Size = UDim2.new(1, 0, 0, 48)
-    Frame.BackgroundColor3 = Theme.Card
-    Instance.new("UICorner", Frame).CornerRadius = UDim.new(0, 8)
-    ApplyStroke(Frame)
-
-    local Label = Instance.new("TextLabel", Frame)
-    Label.Size = UDim2.new(0.5, 0, 1, 0)
-    Label.Position = UDim2.new(0, 12, 0, 0)
-    Label.Text = text
-    Label.Font = Enum.Font.GothamSemibold
-    Label.TextSize = 13
-    Label.TextColor3 = Theme.TextPrimary
-    Label.BackgroundTransparency = 1
-    Label.TextXAlignment = Enum.TextXAlignment.Left
-
-    local Box = Instance.new("TextBox", Frame)
-    Box.Size = UDim2.new(0.4, 0, 0, 28)
-    Box.Position = UDim2.new(0.6, -10, 0, 10)
-    Box.BackgroundColor3 = Theme.Sidebar
-    Box.PlaceholderText = placeholder
-    Box.Text = ""
-    Box.TextColor3 = Theme.TextPrimary
-    Box.Font = Enum.Font.Gotham
-    Box.TextSize = 12
-    Box.ClipsDescendants = true
-    Instance.new("UICorner", Box).CornerRadius = UDim.new(0, 6)
-
-    Box.FocusLost:Connect(function(enterPressed)
-        if Box.Text ~= "" then
-            callback(Box.Text)
-        end
-    end)
-end
-
 -- ====================== BUILD TABS & CONTROLS ======================
 local FarmPage, FarmTab = CreateTab("Farming")
 local CarPage, CarTab = CreateTab("Vehicle")
+local HighwayPage, HighwayTab = CreateTab("Highway")
 local PlayerPage, PlayerTab = CreateTab("Player")
-local SettingsPage, SettingsTab = CreateTab("Misc")
+local SettingsPage, SettingsTab = CreateTab("Settings")
 
 -- FARMING
-CreateSection(FarmPage, "Small Stores Auto Rob")
-CreateToggle(FarmPage, "Store Robbery Loop (TP & Auto-Sell)", false, function(state)
+CreateSection(FarmPage, "Store Farming")
+CreateToggle(FarmPage, "Enable Auto Rob", false, function(state)
     AutoFarmEnabled = state
     if not state and not AutoDragRaceEnabled then CurrentStatus = "Idle" end
 end)
 
-CreateSection(FarmPage, "Automated Race Farming")
-CreateDropdown(FarmPage, "Race Track", {"Drag", "ATW"}, "Drag", function(val)
+CreateSection(FarmPage, "Race Farming")
+CreateDropdown(FarmPage, "Select Track", {"Drag", "ATW"}, "Drag", function(val)
     SelectedRaceType = val
 end)
-CreateToggle(FarmPage, "Auto-Race Loop (16s Launch)", false, function(state)
+CreateToggle(FarmPage, "Enable Auto Race", false, function(state)
     AutoDragRaceEnabled = state
     if not state and not AutoFarmEnabled then CurrentStatus = "Idle" end
 end)
 
 -- VEHICLE
-CreateSection(CarPage, "Universal Speed & Acceleration")
-CreateToggle(CarPage, "Enable Vehicle Velocity Mods", false, function(state)
+CreateSection(CarPage, "Performance Adjustments")
+CreateToggle(CarPage, "Enable Speed Mods", false, function(state)
     CarModsEnabled = state
 end)
 CreateSlider(CarPage, "Max Speed", 50, 350, 160, function(val)
     ModMaxSpeed = val
 end)
-CreateSlider(CarPage, "Acceleration Rate", 1, 25, 8, function(val)
+CreateSlider(CarPage, "Acceleration", 1, 25, 8, function(val)
     ModAcceleration = val
 end)
 
+-- HIGHWAY (TRAFFIC NOCLIP)
+CreateSection(HighwayPage, "Traffic Mods")
+CreateToggle(HighwayPage, "Highway Traffic Noclip", false, function(state)
+    HighwayNoclipEnabled = state
+end)
+
 -- PLAYER
-CreateSection(PlayerPage, "Character Movement")
+CreateSection(PlayerPage, "Movement")
 CreateToggle(PlayerPage, "Infinite Jump", false, function(state)
     InfJumpEnabled = state
 end)
-CreateSlider(PlayerPage, "Custom Jump Power", 50, 200, 50, function(val)
+CreateSlider(PlayerPage, "Jump Power", 50, 200, 50, function(val)
     CustomJumpPower = val
 end)
-CreateSlider(PlayerPage, "Custom WalkSpeed", 16, 120, 16, function(val)
+CreateSlider(PlayerPage, "Walk Speed", 16, 120, 16, function(val)
     CustomWalkSpeed = val
 end)
 
-CreateSection(PlayerPage, "Protection & Ghost")
-CreateToggle(PlayerPage, "Ghost Mode (Local Invisibility)", false, function(state)
+CreateSection(PlayerPage, "Defenses")
+CreateToggle(PlayerPage, "Ghost Mode", false, function(state)
     GhostModeEnabled = state
     if not state and LocalPlayer.Character then
         for _, v in ipairs(LocalPlayer.Character:GetDescendants()) do
@@ -1248,66 +1243,13 @@ CreateToggle(PlayerPage, "Ghost Mode (Local Invisibility)", false, function(stat
         end
     end
 end)
-CreateToggle(PlayerPage, "Anti-Arrest Prompt Destroyer", false, function(state)
+CreateToggle(PlayerPage, "Anti-Arrest", false, function(state)
     AntiArrestEnabled = state
 end)
 
--- SETTINGS / MISC
-CreateSection(SettingsPage, "In-Car Radio Audio Hijack")
-CreateNote(SettingsPage, "⚠️ U NEED THE MUSIC GAMEPASS TO USE THE BYPASS AUDIO")
-CreateTextBox(SettingsPage, "Play Custom Audio ID", "Enter ID...", function(txt)
-    local id = tonumber(txt:match("%d+"))
-    if not id then 
-        CurrentStatus = "Invalid Audio ID!"
-        return 
-    end
-
-    local char = LocalPlayer.Character
-    local hum = char and char:FindFirstChild("Humanoid")
-    
-    if hum and hum.SeatPart then
-        local vehicle = hum.SeatPart:FindFirstAncestorOfClass("Model")
-        if vehicle then
-            local foundRadio = false
-            
-            -- 1. Direct Sound Object Hijack
-            for _, obj in ipairs(vehicle:GetDescendants()) do
-                if obj:IsA("Sound") then
-                    local name = obj.Name:lower()
-                    -- Target potential radio objects, avoid engines/idles
-                    if name:find("radio") or name:find("music") or name:find("song") or name:find("audio") then
-                        obj.SoundId = "rbxassetid://" .. id
-                        obj.TimePosition = 0
-                        obj.Playing = true
-                        obj.Volume = 1
-                        foundRadio = true
-                    end
-                end
-            end
-            
-            -- 2. Backup RemoteEvent trigger
-            for _, obj in ipairs(vehicle:GetDescendants()) do
-                if obj:IsA("RemoteEvent") and (obj.Name:lower():find("radio") or obj.Name:lower():find("music")) then
-                    pcall(function() obj:FireServer("Play", id) end)
-                    pcall(function() obj:FireServer(id) end)
-                end
-            end
-
-            if foundRadio then
-                CurrentStatus = "Playing ID: " .. id .. " in Car!"
-            else
-                CurrentStatus = "No Radio Sound found in this car."
-            end
-        else
-            CurrentStatus = "You must be in a car!"
-        end
-    else
-        CurrentStatus = "You must be in a car!"
-    end
-end)
-
-CreateSection(SettingsPage, "Utilities & Performance")
-CreateToggle(SettingsPage, "Low Quality Saver (Boost FPS)", false, function(state)
+-- SETTINGS
+CreateSection(SettingsPage, "Utility")
+CreateToggle(SettingsPage, "Low Quality Mode", false, function(state)
     if state then
         pcall(function()
             settings().Rendering.QualityLevel = Enum.QualityLevel.Level01
@@ -1325,10 +1267,10 @@ end)
 CreateButton(SettingsPage, "Teleport to Sell Location", function()
     safeTP(SELL_CFRAME)
 end)
-CreateButton(SettingsPage, "Rejoin Current Server", function()
+CreateButton(SettingsPage, "Rejoin Server", function()
     TeleportService:TeleportToPlaceInstance(game.PlaceId, game.JobId, LocalPlayer)
 end)
-CreateButton(SettingsPage, "Destroy UI Hub", function()
+CreateButton(SettingsPage, "Unload Hub", function()
     ScreenGui:Destroy()
 end)
 
